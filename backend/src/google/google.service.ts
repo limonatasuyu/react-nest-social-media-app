@@ -16,11 +16,10 @@ export class GoogleService {
     };
 
     const jwt = this.jwtService.sign(payload);
+    
 
     return {
-      message: 'User information from Google',
-      user: req.user,
-      jwt,
+      message: 'User created successfully.'
     };
   }
 }
