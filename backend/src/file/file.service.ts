@@ -18,7 +18,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { File } from 'src/schemes/file.schema';
 
 @Injectable()
-export class FileUploadService {
+export class FileService {
   bucketName = process.env.AWS_S3_BUCKET_NAME;
   s3Client = new S3Client({
     region: 'us-east-2',

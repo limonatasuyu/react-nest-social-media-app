@@ -7,8 +7,7 @@ export const Route = createFileRoute('/_AuthLayout')({
 
 function LayoutComponent() {
   return (
-    <div className="w-screen h-screen flex justify-center items-center" style={{ background: `url(${background})`, backgroundSize: 'cover', backgroundRepeat: 'no-repeat' }}>
       <Outlet />
-    </div>
+   
   )
 }

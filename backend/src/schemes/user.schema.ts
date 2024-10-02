@@ -7,8 +7,8 @@ export type UserDocument = HydratedDocument<User>;
 
 @Schema()
 export class User {
-  @Prop({ required: true })
-  _id: mongoose.Schema.Types.ObjectId;
+  //@Prop({ required: true })
+  //_id: mongoose.Schema.Types.ObjectId;
 
   @Prop({ required: true, unique: true, index: 'text' })
   username: string;
@@ -22,10 +22,10 @@ export class User {
   @Prop({ required: true, unique: true })
   email: string;
 
-  @Prop({ required: true })
+  @Prop()
   password: string;
 
-  @Prop({ required: true })
+  @Prop()
   dateOfBirth: Date;
 
   @Prop()
@@ -33,6 +33,9 @@ export class User {
 
   @Prop()
   profilePictureId: string;
+
+  @Prop()
+  profilePictureUrl: string;
 
   @Prop({ type: [mongoose.Schema.Types.ObjectId], ref: 'post' })
   savedPosts: Post[];
@@ -51,6 +54,12 @@ export class User {
 
   @Prop({ required: true, type: [mongoose.Schema.Types.ObjectId], ref: 'User' })
   followers: User[];
+
+  @Prop()
+  refreshToken: string;
+
+  @Prop({ required: true })
+  signMethod: 'google' | 'default';
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

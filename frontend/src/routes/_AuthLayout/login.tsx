@@ -1,12 +1,9 @@
 import { Button, Form, Input, Typography } from "antd";
 import { useFormik } from "formik";
-import {
-  EyeInvisibleOutlined,
-  EyeTwoTone,
-  GoogleOutlined,
-} from "@ant-design/icons";
-import { createFileRoute, Outlet, Link } from "@tanstack/react-router";
+import { EyeInvisibleOutlined, EyeTwoTone, GoogleOutlined } from "@ant-design/icons";
+import { createFileRoute, Outlet } from "@tanstack/react-router";
 import { LoginSchema, loginSchema } from "../../validators/auth.validator";
+import background from '/background.jpg'
 
 export const Route = createFileRoute("/_AuthLayout/login")({
   component: LoginPage,
@@ -20,16 +17,15 @@ function LoginPage() {
   });
 
   return (
-    <>
+    <div
+      className="w-screen h-screen flex justify-center items-center"
+      style={{ background: `url(${background})`, backgroundSize: "cover", backgroundRepeat: "no-repeat" }}
+    >
       <div className="w-80">
-        <Typography.Title className="text-white text-center">
-          Vibe Space
-        </Typography.Title>
+        <Typography.Title className="text-white text-center">Vibe Space</Typography.Title>
         <Form onFinish={formik.handleSubmit}>
           <Form.Item
-            validateStatus={
-              formik.touched.email && formik.errors.email ? "error" : ""
-            }
+            validateStatus={formik.touched.email && formik.errors.email ? "error" : ""}
             help={formik.touched.email && formik.errors.email}
           >
             <Input
@@ -42,18 +38,14 @@ function LoginPage() {
           </Form.Item>
 
           <Form.Item
-            validateStatus={
-              formik.touched.password && formik.errors.password ? "error" : ""
-            }
+            validateStatus={formik.touched.password && formik.errors.password ? "error" : ""}
             help={formik.touched.password && formik.errors.password}
           >
             <Input.Password
               addonBefore="Password"
               placeholder="Type your password"
               className="bg-white rounded-lg"
-              iconRender={(visible) =>
-                visible ? <EyeTwoTone /> : <EyeInvisibleOutlined />
-              }
+              iconRender={(visible) => (visible ? <EyeTwoTone /> : <EyeInvisibleOutlined />)}
               value={formik.values.password}
               onChange={formik.handleChange}
               name="password"
@@ -63,14 +55,14 @@ function LoginPage() {
             <Button type="primary" htmlType="submit">
               Login
             </Button>
-            <Button type="primary">Sign up</Button>
-            <Button type="primary" href="http://localhost:3000/google">
+            <Button type="primary" href="/register">Sign up</Button>
+            <Button type="primary" href="http://localhost:3000/auth/google">
               Login with google <GoogleOutlined />
             </Button>
           </div>
         </Form>
         <Outlet />
       </div>
-    </>
+    </div>
   );
 }
