@@ -9,14 +9,8 @@ export type PostDocument = HydratedDocument<Post>;
 
 @Schema()
 export class Post {
-  @Prop({ required: true })
-  _id: mongoose.Schema.Types.ObjectId;
-
-  @Prop({ required: true, index: 'text' })
-  title: string;
-
-  @Prop({ required: true })
-  content: string;
+  @Prop({ index: 'text' })
+  text: string;
 
   @Prop({ required: true, type: mongoose.Schema.Types.ObjectId, ref: 'User' })
   user: User;
@@ -39,6 +33,9 @@ export class Post {
 
   @Prop({ type: [mongoose.Schema.Types.ObjectId], ref: 'User' })
   likedBy: User[];
+
+  @Prop()
+  locations: [number, number][];
 }
 
 export const PostSchema = SchemaFactory.createForClass(Post);

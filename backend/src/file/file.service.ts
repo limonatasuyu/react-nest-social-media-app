@@ -49,7 +49,7 @@ export class FileService {
       throw new InternalServerErrorException();
     }
 
-    return { message: 'File uploaded successfully.' };
+    return { message: 'File uploaded successfully.', fileId: createdFile._id };
   }
 
   async uploadToS3(file: Buffer, fileKey: string) {
@@ -71,7 +71,7 @@ export class FileService {
 
   async relateFile(fileId: string) {
     if (!fileId /* || !mongoose.isValidObjectId(fileId)*/) {
-      throw new BadRequestException('Image not found.');
+      throw new BadRequestException('File not found.');
     }
 
     const updatedFile = await this.fileModel.updateOne(
@@ -80,10 +80,29 @@ export class FileService {
     );
 
     if (!updatedFile.matchedCount) {
-      throw new BadRequestException('Image not found.');
+      throw new BadRequestException('File not found.');
     }
 
     return { message: 'File related successfully.' };
+  }
+
+  async relateFileBulk(fileIds: string[]) {
+    if (!fileIds.length /* || !mongoose.isValidObjectId(fileId)*/) {
+      throw new BadRequestException('File not found.');
+    }
+
+    const updateFilesResponse = await this.fileModel.updateMany(
+      { _id: { $in: fileIds.map((i) => new mongoose.Types.ObjectId(i)) } },
+      { isRelated: true },
+    );
+
+    if (!updateFilesResponse.modifiedCount) {
+      throw new InternalServerErrorException(
+        'Error while trying to relate files.',
+      );
+    }
+
+    return { message: 'Files related successfully.' };
   }
 
   async getFile(fileId: string) {
@@ -108,7 +127,7 @@ export class FileService {
         }),
       );
       const data = await Body.transformToByteArray();
-      return {data: Buffer.from(data), mimetype: file.mimeType}
+      return { data: Buffer.from(data), mimetype: file.mimeType };
     } catch (err) {
       console.error(`Error while trying to get the file: ${err}`);
       throw new InternalServerErrorException(
@@ -141,7 +160,7 @@ export class FileService {
         new DeleteObjectCommand({
           Bucket: this.bucketName,
           Key: fileKey,
-        })
+        }),
       );
     } catch (err) {
       console.error(`Error while trying to delete the file: ${err}`);

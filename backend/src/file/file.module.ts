@@ -10,5 +10,6 @@ import { File, FileSchema } from 'src/schemes/file.schema';
   ],
   controllers: [FileController],
   providers: [FileService],
+  exports: [FileService],
 })
 export class FileModule {}

@@ -6,3 +6,59 @@
 body {
   margin: 0;
 }
+
+.custom-scrollbar textarea {
+  scrollbar-width: thin; /* Firefox */
+  scrollbar-color: #888 #f1f1f1; /* Firefox */
+}
+
+/* Chrome, Edge, Safari */
+.custom-scrollbar textarea::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-scrollbar textarea::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+.custom-scrollbar textarea::-webkit-scrollbar-thumb {
+  background-color: #888;
+  border-radius: 10px;
+}
+
+.custom-scrollbar textarea::-webkit-scrollbar-thumb:hover {
+  background-color: #555;
+}
+
+.custom-audio {
+  width: '100%'; /* Set a fixed width for the audio element */
+  height: 28px; /* Adjust height so it fits inside the tag without clipping */
+  margin-left: 8px; /* Add some spacing if necessary */
+}
+
+.custom-audio::-webkit-media-controls-panel {
+  background-color: transparent; /* You can modify the background if you need */
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0;
+}
+
+.custom-audio::-webkit-media-controls-play-button {
+  /* Style play button */
+}
+
+.custom-audio::-webkit-media-controls-timeline {
+  width: '120%'
+}
+
+.custom-audio::-webkit-media-controls-volume-slider {
+  /* You can hide or style the volume slider */
+  rotation: 90deg;
+}
+
+.custom-audio::-webkit-media-controls-mute-button,
+.custom-audio::-webkit-media-controls-fullscreen-button {
+  display: flex;
+  flex-direction: 'column';
+}
