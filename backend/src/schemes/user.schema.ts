@@ -34,9 +34,6 @@ export class User {
   @Prop()
   profilePictureId: string;
 
-  @Prop()
-  profilePictureUrl: string;
-
   @Prop({ type: [mongoose.Schema.Types.ObjectId], ref: 'post' })
   savedPosts: Post[];
 

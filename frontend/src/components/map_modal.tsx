@@ -1,8 +1,7 @@
 import { useEffect, useState, cloneElement, ReactElement } from "react";
 import { Modal, Button } from "antd";
 import { PushpinOutlined } from "@ant-design/icons";
-import { MapContainer, TileLayer, Marker, useMapEvents } from "react-leaflet";
-import "leaflet/dist/leaflet.css";
+import { GoogleMap, Marker, useJsApiLoader } from "@react-google-maps/api";
 
 const MapModal = ({
   storeLocation,
@@ -16,6 +15,9 @@ const MapModal = ({
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [userLocation, setUserLocation] = useState<[number, number]>([51.505, -0.09]);
   const [selectedLocation, setSelectedLocation] = useState<[number, number]>(defaultLocation ?? userLocation);
+  const { isLoaded } = useJsApiLoader({
+    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY,
+  });
 
   useEffect(() => {
     navigator.geolocation.getCurrentPosition(
@@ -25,7 +27,7 @@ const MapModal = ({
         setSelectedLocation(defaultLocation ?? [latitude, longitude]);
       },
       () => {
-        alert("Unable to retrieve your location");
+        console.error("Unable to retrieve user's location");
       }
     );
   }, [defaultLocation]);
@@ -48,17 +50,9 @@ const MapModal = ({
     setIsModalVisible(false);
   };
 
-  const MapClickHandler = () => {
-    useMapEvents({
-      click(e) {
-        setSelectedLocation([e.latlng.lat, e.latlng.lng]);
-      },
-    });
-    return null;
-  };
-
   let clonedCustomButton;
   if (CustomButton) clonedCustomButton = cloneElement(CustomButton, { onClick: showModal });
+
   return (
     <div>
       {clonedCustomButton ?? (
@@ -74,21 +68,22 @@ const MapModal = ({
       )}
 
       <Modal title="Select Location" open={isModalVisible} onOk={handleOk} onCancel={handleCancel}>
-        <MapContainer
-          center={selectedLocation}
-          zoom={13}
-          style={{ height: "400px", width: "100%" }}
-        >
-          <TileLayer
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-          />
-          <Marker position={selectedLocation} />
-          <MapClickHandler />
-        </MapContainer>
+        {isLoaded ? (
+          <GoogleMap
+            center={{ lat: selectedLocation[0], lng: selectedLocation[1] }}
+            zoom={13}
+            mapContainerStyle={{ height: "400px", width: "100%" }}
+            onClick={(e) => setSelectedLocation([e.latLng.lat(), e.latLng.lng()])}
+          >
+            <Marker position={{ lat: selectedLocation[0], lng: selectedLocation[1] }} />
+          </GoogleMap>
+        ) : (
+          <div>Loading...</div>
+        )}
       </Modal>
     </div>
   );
 };
 
 export default MapModal;
+

@@ -51,6 +51,9 @@ export class File {
 
   @Prop({ required: true })
   isRelated: boolean;
+
+  @Prop()
+  name: string;
 }
 
 export const FileSchema = SchemaFactory.createForClass(File);

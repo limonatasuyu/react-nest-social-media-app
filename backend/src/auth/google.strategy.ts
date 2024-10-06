@@ -9,6 +9,7 @@ import { AuthService } from './auth.service';
 import { HttpService } from '@nestjs/axios';
 import { catchError, firstValueFrom } from 'rxjs';
 import { AxiosError } from 'axios';
+import { FileService } from 'src/file/file.service';
 
 config();
 
@@ -28,6 +29,7 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
     private userService: UserService,
     private authService: AuthService,
     private readonly httpService: HttpService,
+    private fileService: FileService,
   ) {
     super({
       clientID: process.env.GOOGLE_CLIENT_ID,
@@ -87,13 +89,43 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
     const email = emails[0].value;
     let user = await this.userService.findUserByEmail(email);
     if (!user) {
+      let profilePictureId = undefined;
+      if (photos.length && photos[0].value) {
+        const imageUrl = photos[0].value;
+        const imageResponse = await firstValueFrom(
+          this.httpService.get(imageUrl, { responseType: 'arraybuffer' }).pipe(
+            catchError((error: AxiosError) => {
+              console.error(
+                'Error fetching date of birth:',
+                JSON.stringify(error),
+              );
+              throw new Error('Could not fetch date of birth from Google API');
+            }),
+          ),
+        );
+
+        if (imageResponse.data) {
+          const buffer = Buffer.from(imageResponse.data);
+          const mimetype = imageResponse.headers['content-type'];
+
+          const file = {
+            buffer,
+            mimetype,
+          } as Express.Multer.File;
+
+          const { fileId } = await this.fileService.uploadFile(file);
+          profilePictureId = fileId;
+          this.fileService.relateFile(fileId.toString());
+        }
+      }
+
       const userDTO: RegisterUserFromGoogleDTO = {
         firstname: name.givenName,
         lastname: name.familyName,
         email,
         username: generateUsername(email.split('@')[0], 5),
         dateOfBirth,
-        profilePictureUrl: photos[0].value,
+        profilePictureId,
         refreshToken,
         signMethod: 'google',
       };

@@ -5,7 +5,8 @@ import { GoogleStrategy } from './google.strategy';
 import { JwtModule } from '@nestjs/jwt';
 import { UserModule } from 'src/user/user.module';
 import { HttpModule } from '@nestjs/axios';
-import { JwtStrategy } from 'src/jwt.strategy';
+import { JwtStrategy } from './jwt.strategy';
+import { FileModule } from 'src/file/file.module';
 
 @Module({
   imports: [
@@ -14,7 +15,8 @@ import { JwtStrategy } from 'src/jwt.strategy';
       signOptions: { expiresIn: '1h' },
     }),
     UserModule,
-    HttpModule
+    HttpModule,
+    FileModule,
   ],
   providers: [AuthService, GoogleStrategy, JwtStrategy],
   controllers: [AuthController],

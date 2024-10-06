@@ -31,7 +31,7 @@ export class FileService {
   constructor(@InjectModel(File.name) private fileModel: Model<File>) {}
 
   async uploadFile(file: Express.Multer.File) {
-    const { /*originalname, */ mimetype } = file;
+    const { originalname, mimetype } = file;
 
     const fileKey = uuid();
     await this.uploadToS3(file.buffer, fileKey);
@@ -42,6 +42,7 @@ export class FileService {
       user: new mongoose.Types.ObjectId(),
       createdAt: new Date(),
       isRelated: false,
+      name: originalname,
     });
 
     if (!createdFile) {
@@ -127,7 +128,12 @@ export class FileService {
         }),
       );
       const data = await Body.transformToByteArray();
-      return { data: Buffer.from(data), mimetype: file.mimeType };
+
+      return {
+        data: Buffer.from(data),
+        mimetype: file.mimeType,
+        name: file.name
+      };
     } catch (err) {
       console.error(`Error while trying to get the file: ${err}`);
       throw new InternalServerErrorException(

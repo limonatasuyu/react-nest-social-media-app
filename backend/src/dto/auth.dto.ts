@@ -16,7 +16,7 @@ export interface RegisterUserFromGoogleDTO {
   email: string;
   username: string;
   dateOfBirth: Date;
-  profilePictureUrl?: string;
+  profilePictureId?: string;
   refreshToken: string;
   signMethod: 'google';
 }

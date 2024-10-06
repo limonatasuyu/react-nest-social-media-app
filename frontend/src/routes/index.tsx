@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Input, Button, Divider, Tag, Modal } from "antd";
-import { useState, useRef, RefObject } from "react";
+import { useState, useRef, RefObject, useEffect } from "react";
 import {
   FileImageOutlined,
   SoundOutlined,
@@ -9,6 +9,9 @@ import {
   PushpinOutlined,
 } from "@ant-design/icons";
 import MapModal from "../components/map_modal";
+import PostList from "../components/post_list";
+import toast from "react-hot-toast";
+import axios from "axios";
 
 export const Route = createFileRoute("/")({
   component: Homepage,
@@ -39,6 +42,21 @@ function Homepage() {
   const [value, setValue] = useState("");
   const [tags, setTags] = useState<TagType[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [posts, setPosts] = useState([]);
+
+  function fetchPosts() {
+    axios
+      .get("http://localhost:3000/post", { withCredentials: true })
+      .then((response) => setPosts(response.data))
+      .catch((error) =>
+        toast.error(
+          error?.message ?? "Unexpected error occured while getting posts."
+        )
+      );
+
+  }
+
+  useEffect(fetchPosts, []);
 
   const imageInputRef = useRef<HTMLInputElement>(null);
   const soundInputRef = useRef<HTMLInputElement>(null);
@@ -87,15 +105,14 @@ function Homepage() {
     const formData = new FormData();
 
     formData.set("text", value);
-
+    const locations: [number, number][] = []
     tags.forEach((tag, index) => {
       formData.append(`richMedia[${index}][id]`, tag.id.toString());
       formData.append(`richMedia[${index}][name]`, tag.name);
       formData.append(`richMedia[${index}][type]`, tag.type);
 
-      // Handle TagType1 (Document, Sound, Image)
       if (tag.type !== "Location") {
-        formData.append(`richMedia[${index}][content]`, tag.content); // File is directly appendable to FormData
+        formData.append(`richMedia[${index}][content]`, tag.content);
 
         if (tag.mimeType) {
           formData.append(`richMedia[${index}][mimeType]`, tag.mimeType);
@@ -103,152 +120,161 @@ function Homepage() {
       }
 
       if (tag.type === "Location") {
-        formData.append(
-          `richMedia[${index}][content]`,
-          JSON.stringify(tag.content)
-        );
+        locations.push(tag.content as [number, number]);
       }
     });
 
-    fetch("http://localhost:3000/post", {
-      body: formData,
-      method: "POST",
-    })
-      .then((response) => response.json())
-      .then((data) => {
-        console.log(data);
+    if (locations.length) {
+      formData.append("locations", JSON.stringify(locations));
+    }
+
+    axios
+      .post("http://localhost:3000/post", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+        withCredentials: true,
+      })
+      .then((response) => {
+        toast.success(response.data.message);
+        setTags([]);
+        setValue("");
         setIsSubmitting(false);
+        fetchPosts();
       })
       .catch((error) => {
-        console.error("Error:", error);
+        toast.error(error.message);
         setIsSubmitting(false);
       });
   }
 
   return (
-    <div className="p-2 w-full flex flex-col items-center">
-      <div
-        className="w-[23.5rem]"
-        style={{
-          height: `${tags.filter((i) => i.type === "Image").length * 16 + 16 + tags.length * 2.5}rem`,
-        }}
-      >
-        <Input.TextArea
-          style={{
-            resize: "none",
-            height: `${tags.filter((i) => i.type === "Image").length * 16 + 16 + tags.length * 2.5}rem `,
-            paddingBottom: `${tags.filter((i) => i.type === "Image").length * 16 + 4 + f(tags.length)}rem`,
-          }}
-          className="text-lg text-gray-700 custom-scrollbar"
-          showCount={{
-            formatter: ({ count, maxLength }) => (
-              <span className="block -mb-1 text-sm text-gray-500">
-                {count} / {maxLength}
-              </span>
-            ),
-          }}
-          placeholder="What are you thinking about"
-          maxLength={400}
-          onChange={(e) => setValue(e.target.value)}
-          value={value}
-        />
+    <>
+      <div className="p-2 w-full flex flex-col items-center">
         <div
-          className="relative z-10"
+          className="w-[23.5rem]"
           style={{
-            bottom: `${tags.filter((i) => i.type === "Image").length * 16 + 6 + tags.length * 2.5}rem`,
+            height: `${tags.filter((i) => i.type === "Image").length * 16 + 16 + tags.length * 2.5}rem`,
           }}
         >
-          <div
-            className="flex flex-col gap-2"
+          <Input.TextArea
             style={{
-              marginBottom: `${tags.length ? 1 : 0}rem`,
+              resize: "none",
+              height: `${tags.filter((i) => i.type === "Image").length * 16 + 16 + tags.length * 2.5}rem `,
+              paddingBottom: `${tags.filter((i) => i.type === "Image").length * 16 + 4 + f(tags.length)}rem`,
+            }}
+            className="text-lg text-gray-700 custom-scrollbar"
+            showCount={{
+              formatter: ({ count, maxLength }) => (
+                <span className="block -mb-1 text-sm text-gray-500">
+                  {count} / {maxLength}
+                </span>
+              ),
+            }}
+            placeholder="What are you thinking about"
+            maxLength={400}
+            onChange={(e) => setValue(e.target.value)}
+            value={value}
+          />
+          <div
+            className="relative z-10"
+            style={{
+              bottom: `${tags.filter((i) => i.type === "Image").length * 16 + 6 + tags.length * 2.5}rem`,
             }}
           >
-            {tags.map((tag) => (
-              <TagComponent
-                key={tag.id}
-                tag={tag}
-                setTags={setTags}
-                tags={tags}
+            <div
+              className="flex flex-col gap-2"
+              style={{
+                marginBottom: `${tags.length ? 1 : 0}rem`,
+              }}
+            >
+              {tags.map((tag) => (
+                <TagComponent
+                  key={tag.id}
+                  tag={tag}
+                  setTags={setTags}
+                  tags={tags}
+                />
+              ))}
+            </div>
+            <Divider
+              className="text-black-900 border-gray-300 m-0"
+              variant="dashed"
+            />
+            <div className="flex justify-around mt-8">
+              {/* Image Upload */}
+              <input
+                type="file"
+                ref={imageInputRef}
+                style={{ display: "none" }}
+                accept="image/*"
+                onChange={(e) => handleFileChange(e, "Image")}
               />
-            ))}
-          </div>
-          <Divider
-            className="text-black-900 border-gray-300 m-0"
-            variant="dashed"
-          />
-          <div className="flex justify-around mt-8">
-            {/* Image Upload */}
-            <input
-              type="file"
-              ref={imageInputRef}
-              style={{ display: "none" }}
-              accept="image/*"
-              onChange={(e) => handleFileChange(e, "Image")}
-            />
-            <Button
-              className="flex flex-col items-center w-min group gap-1 h-[3.5rem] rounded-none p-0 static border-none -mt-3 pt-2"
-              shape="circle"
-              type="text"
-              onClick={() => handleClick(imageInputRef)}
-            >
-              <FileImageOutlined className="text-2xl text-gray-600 group-hover:text-gray-900 -mt-[0.4rem]" />
-              <span className="text-gray-600 group-hover:text-gray-900">
-                Media
-              </span>
-            </Button>
+              <Button
+                className="flex flex-col items-center w-min group gap-1 h-[3.5rem] rounded-none p-0 static border-none -mt-3 pt-2"
+                shape="circle"
+                type="text"
+                onClick={() => handleClick(imageInputRef)}
+              >
+                <FileImageOutlined className="text-2xl text-gray-600 group-hover:text-gray-900 -mt-[0.4rem]" />
+                <span className="text-gray-600 group-hover:text-gray-900">
+                  Media
+                </span>
+              </Button>
 
-            {/* Sound Upload */}
-            <input
-              type="file"
-              ref={soundInputRef}
-              style={{ display: "none" }}
-              accept="audio/*"
-              onChange={(e) => handleFileChange(e, "Sound")}
-            />
-            <Button
-              className="flex flex-col items-center w-min group gap-1 h-[3.5rem] rounded-none p-0 static border-none -mt-3 pt-2"
-              shape="circle"
-              type="text"
-              onClick={() => handleClick(soundInputRef)}
-            >
-              <SoundOutlined className="text-2xl text-gray-600 group-hover:text-gray-900 -mt-[0.4rem]" />
-              <span className="text-gray-600 group-hover:text-gray-900">
-                Sound
-              </span>
-            </Button>
+              {/* Sound Upload */}
+              <input
+                type="file"
+                ref={soundInputRef}
+                style={{ display: "none" }}
+                accept="audio/*"
+                onChange={(e) => handleFileChange(e, "Sound")}
+              />
+              <Button
+                className="flex flex-col items-center w-min group gap-1 h-[3.5rem] rounded-none p-0 static border-none -mt-3 pt-2"
+                shape="circle"
+                type="text"
+                onClick={() => handleClick(soundInputRef)}
+              >
+                <SoundOutlined className="text-2xl text-gray-600 group-hover:text-gray-900 -mt-[0.4rem]" />
+                <span className="text-gray-600 group-hover:text-gray-900">
+                  Sound
+                </span>
+              </Button>
 
-            <MapModal storeLocation={storeLocation} />
+              <MapModal storeLocation={storeLocation} />
 
-            {/* Document Upload */}
-            <input
-              type="file"
-              ref={documentInputRef}
-              style={{ display: "none" }}
-              accept="application/pdf"
-              onChange={(e) => handleFileChange(e, "Document")}
-            />
-            <Button
-              className="flex flex-col items-center w-min group gap-1 h-[3.5rem] rounded-none p-0 static border-none -mt-3 pt-2"
-              shape="circle"
-              type="text"
-              onClick={() => handleClick(documentInputRef)}
-            >
-              <FilePdfOutlined className="text-2xl text-gray-600 group-hover:text-gray-900 -mt-[0.4rem]" />
-              <span className="text-gray-600 group-hover:text-gray-900">
-                Document
-              </span>
-            </Button>
+              {/* Document Upload */}
+              <input
+                type="file"
+                ref={documentInputRef}
+                style={{ display: "none" }}
+                accept="application/pdf"
+                onChange={(e) => handleFileChange(e, "Document")}
+              />
+              <Button
+                className="flex flex-col items-center w-min group gap-1 h-[3.5rem] rounded-none p-0 static border-none -mt-3 pt-2"
+                shape="circle"
+                type="text"
+                onClick={() => handleClick(documentInputRef)}
+              >
+                <FilePdfOutlined className="text-2xl text-gray-600 group-hover:text-gray-900 -mt-[0.4rem]" />
+                <span className="text-gray-600 group-hover:text-gray-900">
+                  Document
+                </span>
+              </Button>
+            </div>
           </div>
         </div>
+        <div className="flex gap-1 mt-2 w-[23.5rem] z-10">
+          <Button type="primary" onClick={handleSubmit} disabled={isSubmitting}>
+            Share
+          </Button>
+          <Button type="primary">Save for later</Button>
+        </div>
+        <div className="mt-4">
+          <PostList posts={posts} />
+        </div>
       </div>
-      <div className="flex gap-1 mt-2 w-[23.5rem] z-10">
-        <Button type="primary" onClick={handleSubmit} disabled={isSubmitting}>
-          Share
-        </Button>
-        <Button type="primary">Save for later</Button>
-      </div>
-    </div>
+    </>
   );
 }
 
