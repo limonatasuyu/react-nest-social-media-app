@@ -19,6 +19,10 @@ export class PostService {
     private userService: UserService,
   ) {}
 
+  async findPostById(id: string) {
+    return await this.postModel.findById(new mongoose.Types.ObjectId(id));
+  }
+
   async uploadPost(dto: UploadPostDTO) {
     const user = await this.userService.findUserById(dto.userId);
     if (!user) {
@@ -213,8 +217,31 @@ export class PostService {
         },
       },
       {
-        $sort: { createdAt: -1 },
+        $lookup: {
+          from: 'comments',
+          localField: 'comments',
+          foreignField: '_id',
+          as: 'comments',
+          pipeline: [
+            { $sort: { createdAt: -1 } }, // Sort comments by creation date in descending order
+            {
+              $lookup: {
+                from: 'users',
+                localField: 'user',
+                foreignField: '_id',
+                as: 'user',
+              },
+            },
+            { $unwind: '$user' },
+          ],
+        },
       },
+      {
+        $addFields: {
+          lastComment: { $arrayElemAt: ['$comments', 0] }, // Get the first comment (most recent)
+        },
+      }, 
+      { $sort: { createdAt: -1 } },
       {
         $project: {
           text: 1,
@@ -239,9 +266,39 @@ export class PostService {
           isUserLiked: { $in: [user._id, '$likedBy'] },
           isUserDisliked: { $in: [user._id, '$dislikedBy'] },
           isUserSaved: { $in: ['$_id', '$user.savedPosts'] },
+          lastComment: {
+            content: '$lastComment.content',
+            user: {
+              firstname: '$lastComment.user.firstname',
+              lastname: '$lastComment.user.lastname',
+              username: '$lastComment.user.username',
+              profilePictureId: '$lastComment.user.profilePictureId',
+              profilePictureUrl: '$lastComment.user.profilePictureUrl',
+            },
+            likedCount: { $size: { $ifNull: ['$lastComment.likedBy', []] } },
+            dislikedCount: {
+              $size: { $ifNull: ['$lastComment.dislikedBy', []] },
+            },
+          },
         },
       },
     ]);
+
     return postsResponse ?? [];
   }
+
+  async addComment(postId: string, commentId: string, session?: any) {
+    const updatedPost = await this.postModel.updateOne(
+      { _id: new mongoose.Types.ObjectId(postId) },
+      { $push: { comments: new mongoose.Types.ObjectId(commentId) } },
+      { session },
+    );
+
+    if (!updatedPost.modifiedCount || !updatedPost.matchedCount) {
+      throw new InternalServerErrorException(
+        'Error while trying to add the commet',
+      );
+    }
+  }
+
 }

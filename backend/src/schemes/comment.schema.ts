@@ -17,20 +17,23 @@ export class Comment {
   @Prop({ required: true, type: mongoose.Schema.Types.ObjectId, ref: 'User' })
   user: User;
 
+  @Prop({ type: [mongoose.Schema.Types.ObjectId], ref: 'Comment' })
+  answers: Comment[];
+
   @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'Comment' })
   answerTo: Comment;
-
-  @Prop({ required: true })
-  createdAt: Date;
 
   @Prop({ type: [mongoose.Schema.Types.ObjectId], ref: 'User' })
   likedBy: User[];
 
+  @Prop({ type: [mongoose.Schema.Types.ObjectId], ref: 'User' })
+  dislikedBy: User[];
+
   @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'Post' })
   post: Post;
 
-  @Prop({ type: [mongoose.Schema.Types.ObjectId], ref: 'Comment' })
-  answers: Comment[];
+  @Prop({ required: true })
+  createdAt: Date;
 }
 
 export const CommentSchema = SchemaFactory.createForClass(Comment);

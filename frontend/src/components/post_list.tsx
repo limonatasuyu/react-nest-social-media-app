@@ -1,4 +1,13 @@
-import { Avatar, Divider, Input, Typography, Button, Modal, Tag } from "antd";
+import {
+  Avatar,
+  Divider,
+  Input,
+  Typography,
+  Button,
+  Modal,
+  Tag,
+  Form,
+} from "antd";
 import {
   LikeOutlined,
   DislikeOutlined,
@@ -27,6 +36,68 @@ export default function PostList({ posts }: { posts: any[] }) {
 function PostComponent({ post }: { post: any }) {
   const [value, setValue] = useState("");
   const [isReadingMore, setIsReadingMore] = useState(false);
+  const [validationError, setValidationError] = useState("");
+  const [touched, setTouched] = useState(false);
+  const [comments, setComments] = useState(
+    post.lastComment.content ? [post.lastComment] : []
+  );
+  const [submitting, setSubmitting] = useState(false);
+  const [commentPage, setCommentPage] = useState(0);
+
+  function validateInput() {
+    if (value === "") {
+      setTouched(true);
+      setValidationError("Field is required.");
+      return false;
+    } else if (validationError) {
+      setValidationError("");
+    }
+    return true;
+  }
+
+  function handleCommentSharing() {
+    const isInputValid = validateInput();
+    if (!isInputValid) return;
+    setValue("");
+    setTouched(false);
+
+    setSubmitting(true);
+    axios
+      .post(
+        "http://localhost:3000/comment/" + post._id,
+        { content: value },
+        { withCredentials: true }
+      )
+      .then((response) => {
+        setComments([
+          {
+            content: value,
+            user: {
+              firstname: "firstname",
+              lastname: "lastname",
+              username: "username",
+            },
+            createdAt: new Date(),
+            id: response.data.commentId,
+          },
+          ...comments,
+        ]);
+      })
+      .catch((error) => {
+        toast.error(error?.message ?? "Unexpected error occurred.");
+      })
+      .finally(() => setSubmitting(false));
+  }
+
+  function handleFetchComments() {
+    axios.get(
+      `http://localhost:3000/comment/postComments?postId=${post._id}&page=${commentPage}`,
+      { withCredentials: true }
+    ).then((response) => {
+      setComments([...comments, ...response.data.comments])
+      if (!response.data.lastPage) setCommentPage(commentPage + 1)
+    }).catch()
+  }
 
   return (
     <div className="flex flex-col items-start border w-[23.5rem] rounded-lg">
@@ -73,35 +144,105 @@ function PostComponent({ post }: { post: any }) {
           if (file.mimeType.startsWith("image"))
             return <ImageModal key={index} imageId={file._id} />;
           else if (file.mimeType.startsWith("audio"))
-            return <AudioTag key={index} audioId={file._id} mimeType={file.mimeType} />;
-          else return <DocumentTag key={index} fileId={file._id} fileName={file.name}/>;
+            return (
+              <AudioTag
+                key={index}
+                audioId={file._id}
+                mimeType={file.mimeType}
+              />
+            );
+          else
+            return (
+              <DocumentTag key={index} fileId={file._id} fileName={file.name} />
+            );
         })}
-        {
-          post.locations?.map((location, index) => <LocationTag key={index} location={location}/>)
-        }
+        {post.locations?.map((location, index) => (
+          <LocationTag key={index} location={location} />
+        ))}
       </div>
       <PostInteractionsBar post={post} />
       <Divider className="m-0 mt-2" />
       <div className="pb-2 w-full">
-        <Input.TextArea
-          size="large"
-          className="border-none custom-scrollbar outline-none"
-          placeholder="what do you think about that ?"
-          style={{ resize: "none" }}
-          autoSize={{ maxRows: 3 }}
-          showCount={{
-            formatter: ({ count, maxLength }) => (
-              <span className="block -mb-1 text-sm text-gray-500 mr-2 mt-2">
-                {count} / {maxLength}
-              </span>
-            ),
-          }}
-          maxLength={400}
-          onChange={(e) => setValue(e.target.value)}
-          value={value}
-        />
-        <Button className="ml-2 mt-2">Share</Button>
+        <Form.Item
+          validateStatus={touched && validationError ? "error" : ""}
+          help={
+            touched &&
+            validationError && <span className="ml-2">{validationError}</span>
+          }
+        >
+          <Input.TextArea
+            size="large"
+            className="custom-scrollbar outline-none"
+            placeholder="what do you think about that ?"
+            style={{ resize: "none" }}
+            autoSize={{ maxRows: 3 }}
+            showCount={{
+              formatter: ({ count, maxLength }) => (
+                <span className="block -mb-1 text-sm text-gray-500 mr-2 mt-2">
+                  {count} / {maxLength}
+                </span>
+              ),
+            }}
+            maxLength={400}
+            onChange={(e) => {
+              validateInput();
+              setValue(e.target.value);
+            }}
+            value={value}
+          />
+        </Form.Item>
+        <Button
+          className="ml-2 mt-2"
+          onClick={handleCommentSharing}
+          disabled={submitting}
+        >
+          Share
+        </Button>
       </div>
+      {Boolean(comments.length) && <PostComments comments={comments} />}
+      {post.commentCount > 1 && (
+        <Button
+          onClick={handleFetchComments}
+          className="inline p-0 m-0 ml-2 border-none h-min outline-none"
+          type="link"
+        >
+          Show more..
+        </Button>
+      )}
+    </div>
+  );
+}
+
+function PostComments({ comments }: { comments: any[] }) {
+  return (
+    <div>
+      {comments.map((comment, index) => (
+        <div key={index} className="">
+          <div className="flex items-center gap-2 mt-2 ml-2">
+            <Avatar
+              size="large"
+              src={
+                comment.user?.profilePictureId && (
+                  <img
+                    src={`http://localhost:3000/file/${comment.user.profilePictureId}`}
+                  />
+                )
+              }
+            >
+              {comment.user.username[0]}
+            </Avatar>
+            <div>
+              <Typography className="text-gray-800 font-bold">
+                {comment.user.firstname}&nbsp;{comment.user.lastname}
+              </Typography>
+              <Typography className="text-gray-500">
+                @{comment.user.username}
+              </Typography>
+            </div>
+          </div>
+          <div className="text-gray-600 ml-2">{comment.content}</div>
+        </div>
+      ))}
     </div>
   );
 }
@@ -217,26 +358,24 @@ function PostInteractionsBar({ post }: { post: any }) {
   );
 }
 
-
 function LocationTag({ location }: { location: [number, number] }) {
   return (
-
     <Tag
       style={{ height: "2rem" }}
       className="rounded-xl ml-2 flex items-center justify-between relative"
     >
-    <MapModal
-      CustomButton={
-        <div className="flex items-center cursor-pointer">
-          <span className="text-ellipsis max-w-80 overflow-hidden whitespace-nowrap inline-block">
-            Location
-          </span>
-          &nbsp;
-          <PushpinOutlined />
-        </div>
-      }
-      defaultLocation={location}
-    />
+      <MapModal
+        CustomButton={
+          <div className="flex items-center cursor-pointer">
+            <span className="text-ellipsis max-w-80 overflow-hidden whitespace-nowrap inline-block">
+              Location
+            </span>
+            &nbsp;
+            <PushpinOutlined />
+          </div>
+        }
+        defaultLocation={location}
+      />
     </Tag>
   );
 }
@@ -303,19 +442,23 @@ function DocumentTag({
   fileName: string;
 }) {
   return (
-    <a href={`http://localhost:3000/file/${fileId}`} target="_blank" download={fileName}>
-    <Tag
-      style={{ height: "2rem" }}
-      className="rounded-xl ml-2 flex items-center justify-between relative"
+    <a
+      href={`http://localhost:3000/file/${fileId}`}
+      target="_blank"
+      download={fileName}
     >
-      <div className="flex items-center">
-        <span className="text-ellipsis max-w-80 overflow-hidden whitespace-nowrap inline-block">
-          {fileName}
-        </span>
-        &nbsp;
-        <FilePdfOutlined />
-      </div>
-    </Tag>
+      <Tag
+        style={{ height: "2rem" }}
+        className="rounded-xl ml-2 flex items-center justify-between relative"
+      >
+        <div className="flex items-center">
+          <span className="text-ellipsis max-w-80 overflow-hidden whitespace-nowrap inline-block">
+            {fileName}
+          </span>
+          &nbsp;
+          <FilePdfOutlined />
+        </div>
+      </Tag>
     </a>
   );
 }
