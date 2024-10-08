@@ -71,4 +71,12 @@ export class UserService {
 
     return { message: 'Operation handled successfully.', isSaved };
   }
+
+  async getUserInfo(userId: string) {
+    const user = await this.userModel
+      .findById(new mongoose.Types.ObjectId(userId))
+      .populate('firstname lastname username');
+
+    return user;
+  }
 }

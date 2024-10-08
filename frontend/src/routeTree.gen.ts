@@ -12,9 +12,11 @@
 
 import { Route as rootRoute } from './routes/__root'
 import { Route as AuthLayoutImport } from './routes/_AuthLayout'
-import { Route as IndexImport } from './routes/index'
+import { Route as AppLayoutImport } from './routes/_AppLayout'
+import { Route as AppLayoutIndexImport } from './routes/_AppLayout/index'
 import { Route as AuthLayoutRegisterImport } from './routes/_AuthLayout/register'
 import { Route as AuthLayoutLoginImport } from './routes/_AuthLayout/login'
+import { Route as AppLayoutPostImport } from './routes/_AppLayout/post'
 
 // Create/Update Routes
 
@@ -23,9 +25,14 @@ const AuthLayoutRoute = AuthLayoutImport.update({
   getParentRoute: () => rootRoute,
 } as any)
 
-const IndexRoute = IndexImport.update({
-  path: '/',
+const AppLayoutRoute = AppLayoutImport.update({
+  id: '/_AppLayout',
   getParentRoute: () => rootRoute,
+} as any)
+
+const AppLayoutIndexRoute = AppLayoutIndexImport.update({
+  path: '/',
+  getParentRoute: () => AppLayoutRoute,
 } as any)
 
 const AuthLayoutRegisterRoute = AuthLayoutRegisterImport.update({
@@ -38,15 +45,20 @@ const AuthLayoutLoginRoute = AuthLayoutLoginImport.update({
   getParentRoute: () => AuthLayoutRoute,
 } as any)
 
+const AppLayoutPostRoute = AppLayoutPostImport.update({
+  path: '/post',
+  getParentRoute: () => AppLayoutRoute,
+} as any)
+
 // Populate the FileRoutesByPath interface
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexImport
+    '/_AppLayout': {
+      id: '/_AppLayout'
+      path: ''
+      fullPath: ''
+      preLoaderRoute: typeof AppLayoutImport
       parentRoute: typeof rootRoute
     }
     '/_AuthLayout': {
@@ -55,6 +67,13 @@ declare module '@tanstack/react-router' {
       fullPath: ''
       preLoaderRoute: typeof AuthLayoutImport
       parentRoute: typeof rootRoute
+    }
+    '/_AppLayout/post': {
+      id: '/_AppLayout/post'
+      path: '/post'
+      fullPath: '/post'
+      preLoaderRoute: typeof AppLayoutPostImport
+      parentRoute: typeof AppLayoutImport
     }
     '/_AuthLayout/login': {
       id: '/_AuthLayout/login'
@@ -70,10 +89,31 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthLayoutRegisterImport
       parentRoute: typeof AuthLayoutImport
     }
+    '/_AppLayout/': {
+      id: '/_AppLayout/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof AppLayoutIndexImport
+      parentRoute: typeof AppLayoutImport
+    }
   }
 }
 
 // Create and export the route tree
+
+interface AppLayoutRouteChildren {
+  AppLayoutPostRoute: typeof AppLayoutPostRoute
+  AppLayoutIndexRoute: typeof AppLayoutIndexRoute
+}
+
+const AppLayoutRouteChildren: AppLayoutRouteChildren = {
+  AppLayoutPostRoute: AppLayoutPostRoute,
+  AppLayoutIndexRoute: AppLayoutIndexRoute,
+}
+
+const AppLayoutRouteWithChildren = AppLayoutRoute._addFileChildren(
+  AppLayoutRouteChildren,
+)
 
 interface AuthLayoutRouteChildren {
   AuthLayoutLoginRoute: typeof AuthLayoutLoginRoute
@@ -90,48 +130,54 @@ const AuthLayoutRouteWithChildren = AuthLayoutRoute._addFileChildren(
 )
 
 export interface FileRoutesByFullPath {
-  '/': typeof IndexRoute
   '': typeof AuthLayoutRouteWithChildren
+  '/post': typeof AppLayoutPostRoute
   '/login': typeof AuthLayoutLoginRoute
   '/register': typeof AuthLayoutRegisterRoute
+  '/': typeof AppLayoutIndexRoute
 }
 
 export interface FileRoutesByTo {
-  '/': typeof IndexRoute
   '': typeof AuthLayoutRouteWithChildren
+  '/post': typeof AppLayoutPostRoute
   '/login': typeof AuthLayoutLoginRoute
   '/register': typeof AuthLayoutRegisterRoute
+  '/': typeof AppLayoutIndexRoute
 }
 
 export interface FileRoutesById {
   __root__: typeof rootRoute
-  '/': typeof IndexRoute
+  '/_AppLayout': typeof AppLayoutRouteWithChildren
   '/_AuthLayout': typeof AuthLayoutRouteWithChildren
+  '/_AppLayout/post': typeof AppLayoutPostRoute
   '/_AuthLayout/login': typeof AuthLayoutLoginRoute
   '/_AuthLayout/register': typeof AuthLayoutRegisterRoute
+  '/_AppLayout/': typeof AppLayoutIndexRoute
 }
 
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '' | '/login' | '/register'
+  fullPaths: '' | '/post' | '/login' | '/register' | '/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '' | '/login' | '/register'
+  to: '' | '/post' | '/login' | '/register' | '/'
   id:
     | '__root__'
-    | '/'
+    | '/_AppLayout'
     | '/_AuthLayout'
+    | '/_AppLayout/post'
     | '/_AuthLayout/login'
     | '/_AuthLayout/register'
+    | '/_AppLayout/'
   fileRoutesById: FileRoutesById
 }
 
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute
+  AppLayoutRoute: typeof AppLayoutRouteWithChildren
   AuthLayoutRoute: typeof AuthLayoutRouteWithChildren
 }
 
 const rootRouteChildren: RootRouteChildren = {
-  IndexRoute: IndexRoute,
+  AppLayoutRoute: AppLayoutRouteWithChildren,
   AuthLayoutRoute: AuthLayoutRouteWithChildren,
 }
 
@@ -147,12 +193,16 @@ export const routeTree = rootRoute
     "__root__": {
       "filePath": "__root.tsx",
       "children": [
-        "/",
+        "/_AppLayout",
         "/_AuthLayout"
       ]
     },
-    "/": {
-      "filePath": "index.tsx"
+    "/_AppLayout": {
+      "filePath": "_AppLayout.tsx",
+      "children": [
+        "/_AppLayout/post",
+        "/_AppLayout/"
+      ]
     },
     "/_AuthLayout": {
       "filePath": "_AuthLayout.tsx",
@@ -161,6 +211,10 @@ export const routeTree = rootRoute
         "/_AuthLayout/register"
       ]
     },
+    "/_AppLayout/post": {
+      "filePath": "_AppLayout/post.tsx",
+      "parent": "/_AppLayout"
+    },
     "/_AuthLayout/login": {
       "filePath": "_AuthLayout/login.tsx",
       "parent": "/_AuthLayout"
@@ -168,6 +222,10 @@ export const routeTree = rootRoute
     "/_AuthLayout/register": {
       "filePath": "_AuthLayout/register.tsx",
       "parent": "/_AuthLayout"
+    },
+    "/_AppLayout/": {
+      "filePath": "_AppLayout/index.tsx",
+      "parent": "/_AppLayout"
     }
   }
 }

@@ -38,7 +38,7 @@ export class PostService {
         }
       }
       let verifiedLocations;
-      const locations = JSON.parse(dto.locations);
+      const locations = dto.locations ? JSON.parse(dto.locations) : undefined;
       if (
         Array.isArray(locations) &&
         locations.every(
@@ -240,7 +240,7 @@ export class PostService {
         $addFields: {
           lastComment: { $arrayElemAt: ['$comments', 0] }, // Get the first comment (most recent)
         },
-      }, 
+      },
       { $sort: { createdAt: -1 } },
       {
         $project: {
@@ -301,4 +301,104 @@ export class PostService {
     }
   }
 
+  async getPost(postId: string, userId?: string) {
+    let user;
+    if (userId) {
+      user = await this.userService.findUserById(userId);
+      if (!user) {
+        throw new BadRequestException('User not found');
+      }
+    }
+    const response = await this.postModel.aggregate([
+      { $match: { _id: new mongoose.Types.ObjectId(postId) } },
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'user',
+          foreignField: '_id',
+          as: 'user',
+        },
+      },
+      { $unwind: '$user' },
+      {
+        $lookup: {
+          from: 'files',
+          localField: 'fileIds',
+          foreignField: '_id',
+          as: 'files',
+        },
+      },
+      {
+        $addFields: {
+          commentCount: { $size: '$comments' },
+        },
+      },
+      {
+        $lookup: {
+          from: 'comments',
+          localField: 'comments',
+          foreignField: '_id',
+          as: 'comments',
+          pipeline: [
+            { $sort: { createdAt: -1 } }, // Sort comments by creation date in descending order
+            {
+              $lookup: {
+                from: 'users',
+                localField: 'user',
+                foreignField: '_id',
+                as: 'user',
+              },
+            },
+            { $unwind: '$user' },
+            { $limit: 7 },
+            {
+              $project: {
+                content: 1,
+                user: {
+                  firstname: 1,
+                  lastname: 1,
+                  username: 1,
+                  profilePictureId: 1,
+                  profilePictureUrl: 1,
+                },
+                likedCount: { $size: '$likedBy' },
+                dislikedCount: { $size: '$dislikedBy' },
+              },
+            },
+          ],
+        },
+      },
+      { $sort: { createdAt: -1 } },
+      {
+        $project: {
+          text: 1,
+          user: {
+            firstname: 1,
+            lastname: 1,
+            username: 1,
+            profilePictureId: 1,
+            profilePictureUrl: 1,
+          },
+          files: {
+            mimeType: 1,
+            _id: 1,
+            name: 1,
+          },
+          locations: 1,
+          likeCount: { $size: '$likedBy' },
+          dislikeCount: { $size: '$dislikedBy' },
+          commentCount: 1,
+          notEdited: { $eq: ['$createdAt', '$updatedAt'] },
+          saveCount: 1,
+          isUserLiked: user ? { $in: [user._id, '$likedBy'] } : undefined,
+          isUserDisliked: user ? { $in: [user._id, '$dislikedBy'] } : undefined,
+          isUserSaved: { $in: ['$_id', '$user.savedPosts'] },
+          comments: 1,
+        },
+      },
+    ]);
+    return response[0]
+      ? { message: 'Post retrieved successfully.', post: response[0] }
+      : { message: 'Post not found.' };
+  }
 }

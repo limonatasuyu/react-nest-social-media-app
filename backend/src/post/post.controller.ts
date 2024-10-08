@@ -58,4 +58,9 @@ export class PostController {
     return await this.postService.savePost(req.user.userId, id);
   }
 
+  @Get('get_post/:postId')
+  async getPost(@Req() req: Request, @Param('postId') id: string) {
+    //@ts-expect-error guard adds the userId key
+    return await this.postService.getPost(id, req.user.userId);
+  }
 }

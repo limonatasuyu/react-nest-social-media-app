@@ -73,7 +73,7 @@ const MapModal = ({
             center={{ lat: selectedLocation[0], lng: selectedLocation[1] }}
             zoom={13}
             mapContainerStyle={{ height: "400px", width: "100%" }}
-            onClick={(e) => setSelectedLocation([e.latLng.lat(), e.latLng.lng()])}
+            onClick={(e) => setSelectedLocation([e.latLng?.lat() as number, e.latLng?.lng() as number])}
           >
             <Marker position={{ lat: selectedLocation[0], lng: selectedLocation[1] }} />
           </GoogleMap>
@@ -86,4 +86,3 @@ const MapModal = ({
 };
 
 export default MapModal;
-

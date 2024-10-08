@@ -235,6 +235,7 @@ export class CommentService {
       {
         $match: { post: new mongoose.Types.ObjectId(postId) },
       },
+      { $addFields: { totalCount: '$count' } },
       {
         $sort: { createdAt: -1 },
       },
@@ -268,6 +269,6 @@ export class CommentService {
         },
       },
     ]);
-    return { comments };
+    return { comments }
   }
 }
