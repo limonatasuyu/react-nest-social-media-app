@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import { Comment } from 'src/schemes/comment.schema';
 import { InjectModel, InjectConnection } from '@nestjs/mongoose';
-import mongoose, { Model, startSession } from 'mongoose';
+import mongoose, { Model, ObjectId, startSession } from 'mongoose';
 import { PostService } from 'src/post/post.service';
 import { CreateAnswerDTO, CreateCommentDTO } from 'src/dto/comment.dto';
 import { UserService } from 'src/user/user.service';
@@ -269,6 +269,36 @@ export class CommentService {
         },
       },
     ]);
-    return { comments }
+    return { comments };
+  }
+
+  async getUserCommentedPosts(userId: string, page: number) {
+    const existingUser = await this.userService.findUserById(userId);
+    if (!existingUser) {
+      throw new BadRequestException('User not found.');
+    }
+
+    const comments = await this.commentModel
+      .find({ user: existingUser._id })
+      .sort({ createdAt: -1 })
+      .skip((page - 1) * 10 >= 0 ? (page - 1) * 10 : 0)
+      .limit(10);
+
+    if (!comments) {
+      throw new InternalServerErrorException(
+        'Error while trying to get the posts.1',
+      );
+    }
+
+    const posts = await this.postService.findManyPostsById(
+      comments.map((i) => i.post) as unknown as ObjectId[],
+      existingUser._id,
+    );
+    if (!posts) {
+      throw new InternalServerErrorException(
+        'Error while trying to get the posts.2',
+      );
+    }
+    return posts;
   }
 }

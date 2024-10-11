@@ -8,6 +8,7 @@ import {
   Get,
   UseGuards,
   Param,
+  Query,
 } from '@nestjs/common';
 import { PostService } from './post.service';
 import { AnyFilesInterceptor } from '@nestjs/platform-express';
@@ -62,5 +63,21 @@ export class PostController {
   async getPost(@Req() req: Request, @Param('postId') id: string) {
     //@ts-expect-error guard adds the userId key
     return await this.postService.getPost(id, req.user.userId);
+  }
+
+  @Get('user')
+  async getUserPosts(
+    @Query('page') page: number,
+    @Query('userId') userId: string,
+  ) {
+    return await this.postService.getUserPosts(page, userId);
+  }
+
+  @Get('liked')
+  async getLikedPosts(
+    @Query('page') page: number,
+    @Query('userId') userId: string,
+  ) {
+    return await this.postService.getUsersLikedPosts(page, userId);
   }
 }

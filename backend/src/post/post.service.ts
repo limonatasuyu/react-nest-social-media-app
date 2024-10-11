@@ -5,7 +5,7 @@ import {
   NotImplementedException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import mongoose, { Model } from 'mongoose';
+import mongoose, { Model, ObjectId } from 'mongoose';
 import { Post } from 'src/schemes/post.schema';
 import { UploadPostDTO } from 'src/dto/post.dto';
 import { FileService } from 'src/file/file.service';
@@ -120,7 +120,6 @@ export class PostService {
     );
 
     if (!updateResponse.modifiedCount) {
-      console.log(updateResponse);
       throw new InternalServerErrorException();
     }
 
@@ -223,7 +222,7 @@ export class PostService {
           foreignField: '_id',
           as: 'comments',
           pipeline: [
-            { $sort: { createdAt: -1 } }, // Sort comments by creation date in descending order
+            { $sort: { createdAt: -1 } },
             {
               $lookup: {
                 from: 'users',
@@ -340,7 +339,7 @@ export class PostService {
           foreignField: '_id',
           as: 'comments',
           pipeline: [
-            { $sort: { createdAt: -1 } }, // Sort comments by creation date in descending order
+            { $sort: { createdAt: -1 } },
             {
               $lookup: {
                 from: 'users',
@@ -400,5 +399,287 @@ export class PostService {
     return response[0]
       ? { message: 'Post retrieved successfully.', post: response[0] }
       : { message: 'Post not found.' };
+  }
+
+  async getUserPosts(page: number, userId: string) {
+    const user = await this.userService.findUserById(userId);
+    if (!user) {
+      throw new BadRequestException('User not found');
+    }
+    const posts = await this.postModel.aggregate([
+      { $match: { user: user._id } },
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'user',
+          foreignField: '_id',
+          as: 'user',
+        },
+      },
+      { $unwind: '$user' },
+      {
+        $lookup: {
+          from: 'files',
+          localField: 'fileIds',
+          foreignField: '_id',
+          as: 'files',
+        },
+      },
+      {
+        $lookup: {
+          from: 'comments',
+          localField: 'comments',
+          foreignField: '_id',
+          as: 'comments',
+          pipeline: [
+            { $sort: { createdAt: -1 } },
+            {
+              $lookup: {
+                from: 'users',
+                localField: 'user',
+                foreignField: '_id',
+                as: 'user',
+              },
+            },
+            { $unwind: '$user' },
+          ],
+        },
+      },
+      {
+        $addFields: {
+          lastComment: { $arrayElemAt: ['$comments', 0] }, // Get the first comment (most recent)
+        },
+      },
+      { $sort: { createdAt: -1 } },
+      {
+        $project: {
+          text: 1,
+          user: {
+            firstname: 1,
+            lastname: 1,
+            username: 1,
+            profilePictureId: 1,
+            profilePictureUrl: 1,
+          },
+          files: {
+            mimeType: 1,
+            _id: 1,
+            name: 1,
+          },
+          locations: 1,
+          likeCount: { $size: '$likedBy' },
+          dislikeCount: { $size: '$dislikedBy' },
+          commentCount: { $size: '$comments' },
+          notEdited: { $eq: ['$createdAt', '$updatedAt'] },
+          saveCount: 1,
+          isUserLiked: { $in: [user._id, '$likedBy'] },
+          isUserDisliked: { $in: [user._id, '$dislikedBy'] },
+          isUserSaved: { $in: ['$_id', '$user.savedPosts'] },
+          lastComment: {
+            content: '$lastComment.content',
+            user: {
+              firstname: '$lastComment.user.firstname',
+              lastname: '$lastComment.user.lastname',
+              username: '$lastComment.user.username',
+              profilePictureId: '$lastComment.user.profilePictureId',
+              profilePictureUrl: '$lastComment.user.profilePictureUrl',
+            },
+            likedCount: { $size: { $ifNull: ['$lastComment.likedBy', []] } },
+            dislikedCount: {
+              $size: { $ifNull: ['$lastComment.dislikedBy', []] },
+            },
+          },
+        },
+      },
+      { $skip: (page - 1) * 10 >= 0 ? (page - 1) * 10 : 0 },
+      { $limit: 10 },
+    ]);
+    return posts ?? [];
+  }
+
+  async getUsersLikedPosts(page: number, userId: string) {
+    const user = await this.userService.findUserById(userId);
+    if (!user) {
+      throw new BadRequestException('User not found');
+    }
+    const posts = await this.postModel.aggregate([
+      { $match: { likedBy: { $in: [user._id] } } },
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'user',
+          foreignField: '_id',
+          as: 'user',
+        },
+      },
+      { $unwind: '$user' },
+      {
+        $lookup: {
+          from: 'files',
+          localField: 'fileIds',
+          foreignField: '_id',
+          as: 'files',
+        },
+      },
+      {
+        $lookup: {
+          from: 'comments',
+          localField: 'comments',
+          foreignField: '_id',
+          as: 'comments',
+          pipeline: [
+            { $sort: { createdAt: -1 } },
+            {
+              $lookup: {
+                from: 'users',
+                localField: 'user',
+                foreignField: '_id',
+                as: 'user',
+              },
+            },
+            { $unwind: '$user' },
+          ],
+        },
+      },
+      {
+        $addFields: {
+          lastComment: { $arrayElemAt: ['$comments', 0] }, // Get the first comment (most recent)
+        },
+      },
+      { $sort: { createdAt: -1 } },
+      {
+        $project: {
+          text: 1,
+          user: {
+            firstname: 1,
+            lastname: 1,
+            username: 1,
+            profilePictureId: 1,
+            profilePictureUrl: 1,
+          },
+          files: {
+            mimeType: 1,
+            _id: 1,
+            name: 1,
+          },
+          locations: 1,
+          likeCount: { $size: '$likedBy' },
+          dislikeCount: { $size: '$dislikedBy' },
+          commentCount: { $size: '$comments' },
+          notEdited: { $eq: ['$createdAt', '$updatedAt'] },
+          saveCount: 1,
+          isUserLiked: { $in: [user._id, '$likedBy'] },
+          isUserDisliked: { $in: [user._id, '$dislikedBy'] },
+          isUserSaved: { $in: ['$_id', '$user.savedPosts'] },
+          lastComment: {
+            content: '$lastComment.content',
+            user: {
+              firstname: '$lastComment.user.firstname',
+              lastname: '$lastComment.user.lastname',
+              username: '$lastComment.user.username',
+              profilePictureId: '$lastComment.user.profilePictureId',
+              profilePictureUrl: '$lastComment.user.profilePictureUrl',
+            },
+            likedCount: { $size: { $ifNull: ['$lastComment.likedBy', []] } },
+            dislikedCount: {
+              $size: { $ifNull: ['$lastComment.dislikedBy', []] },
+            },
+          },
+        },
+      },
+      { $skip: (page - 1) * 10 >= 0 ? (page - 1) * 10 : 0 },
+      { $limit: 10 },
+    ]);
+    return posts ?? [];
+  }
+
+  async findManyPostsById(postIds: ObjectId[], userId: ObjectId) {
+    const posts = await this.postModel.aggregate([
+      { $match: { _id: { $in: postIds } } },
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'user',
+          foreignField: '_id',
+          as: 'user',
+        },
+      },
+      { $unwind: '$user' },
+      {
+        $lookup: {
+          from: 'files',
+          localField: 'fileIds',
+          foreignField: '_id',
+          as: 'files',
+        },
+      },
+      {
+        $lookup: {
+          from: 'comments',
+          localField: 'comments',
+          foreignField: '_id',
+          as: 'comments',
+          pipeline: [
+            { $sort: { createdAt: -1 } },
+            {
+              $lookup: {
+                from: 'users',
+                localField: 'user',
+                foreignField: '_id',
+                as: 'user',
+              },
+            },
+            { $unwind: '$user' },
+          ],
+        },
+      },
+      {
+        $addFields: {
+          lastComment: { $arrayElemAt: ['$comments', 0] }, // Get the first comment (most recent)
+        },
+      },
+      { $sort: { createdAt: -1 } },
+      {
+        $project: {
+          text: 1,
+          user: {
+            firstname: 1,
+            lastname: 1,
+            username: 1,
+            profilePictureId: 1,
+            profilePictureUrl: 1,
+          },
+          files: {
+            mimeType: 1,
+            _id: 1,
+            name: 1,
+          },
+          locations: 1,
+          likeCount: { $size: '$likedBy' },
+          dislikeCount: { $size: '$dislikedBy' },
+          commentCount: { $size: '$comments' },
+          notEdited: { $eq: ['$createdAt', '$updatedAt'] },
+          saveCount: 1,
+          isUserLiked: { $in: [userId, '$likedBy'] },
+          isUserDisliked: { $in: [userId, '$dislikedBy'] },
+          isUserSaved: { $in: ['$_id', '$user.savedPosts'] },
+          lastComment: {
+            content: '$lastComment.content',
+            user: {
+              firstname: '$lastComment.user.firstname',
+              lastname: '$lastComment.user.lastname',
+              username: '$lastComment.user.username',
+              profilePictureId: '$lastComment.user.profilePictureId',
+              profilePictureUrl: '$lastComment.user.profilePictureUrl',
+            },
+            likedCount: { $size: { $ifNull: ['$lastComment.likedBy', []] } },
+            dislikedCount: {
+              $size: { $ifNull: ['$lastComment.dislikedBy', []] },
+            },
+          },
+        },
+      },
+    ]);
+    return posts ?? [];
   }
 }

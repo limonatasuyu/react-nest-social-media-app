@@ -14,8 +14,7 @@ function PostPage() {
   const [loadState, setLoadState] = useState<'loading' | 'error' | 'loaded'>(
     'loading',
   )
-  const [userInfo, setUserInfo] = useState(null)
-
+  
   function fetchPost() {
     axios
       .get(`http://localhost:3000/post/get_post/${id}`, {
@@ -31,30 +30,14 @@ function PostPage() {
       })
   }
 
-  function fetchUserInfo() {
-    axios
-      .get('http://localhost:3000/user/me', { withCredentials: true })
-      .then((response) => setUserInfo(response.data))
-      .catch((error) =>
-        toast.error(
-          error?.message ?? 'Unexpected error occured while getting user info.',
-        ),
-      )
-  }
-
-  function fetchData() {
-    fetchPost()
-    fetchUserInfo()
-  }
-
-  useEffect(fetchData, [])
+  useEffect(fetchPost, [])
   if (loadState === 'loading') return 'loading'
   else if (loadState === 'error') return 'error'
   return (
     <div className="p-2 w-full flex flex-col items-center">
       <div className="mt-4">
         <div className="flex flex-col gap-2">
-          <PostComponent post={post} postPage userInfo={userInfo} />
+          <PostComponent post={post} postPage />
         </div>
       </div>
     </div>

@@ -1,27 +1,22 @@
 import { Divider, Input, Typography, Button, Form } from "antd";
-import { useState } from "react";
+import { useContext, useState } from "react";
 import toast from "react-hot-toast";
 import axios from "axios";
 import { Comments, CustomAvatar, PostInteractionsBar } from "./post_parts";
 import { PostAttachments } from "./post_attachments";
+import { UserContext } from "../routes/_AppLayout";
+import { CommentData, PostData } from "../interfaces";
 
-export function PostComponent({
-  post,
-  postPage,
-  userInfo,
-}: {
-  post: any;
-  postPage?: boolean;
-  userInfo: { firstname: string; lastname: string; username: string; id: string };
-}) {
+export function PostComponent({ post, postPage }: { post: PostData; postPage?: boolean }) {
   const [value, setValue] = useState("");
   const [isReadingMore, setIsReadingMore] = useState(false);
   const [validationError, setValidationError] = useState("");
   const [touched, setTouched] = useState(false);
-  const [comments, setComments] = useState(
-    postPage ? post.comments : post.lastComment.content ? [post.lastComment] : []
+  const [comments, setComments] = useState<CommentData[]>(
+    (postPage ? post.comments : post.lastComment?.content ? [post.lastComment] : []) ?? []
   );
   const [submitting, setSubmitting] = useState(false);
+  const userInfo = useContext(UserContext);
 
   function validateInput() {
     if (value === "") {
@@ -51,9 +46,8 @@ export function PostComponent({
               firstname: userInfo.firstname,
               lastname: userInfo.lastname,
               username: userInfo.username,
-              id: userInfo.id,
+              _id: userInfo._id,
               profilePictureId: userInfo.profilePictureId,
-              profilePictureUrl: userInfo.profilePictureUrl
             },
             createdAt: new Date(),
             id: response.data.commentId,
@@ -68,7 +62,7 @@ export function PostComponent({
   }
 
   return (
-    <div className="flex flex-col items-start border w-[23.5rem] rounded-lg">
+    <div className="flex flex-col items-start border w-[23.5rem] rounded-lg bg-white">
       <CustomAvatar user={post.user} />
       <div className="mt-2 ml-4">
         <Typography>

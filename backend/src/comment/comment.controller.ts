@@ -17,20 +17,6 @@ import { JwtAuthGuard } from 'src/auth/auth.guard';
 export class CommentController {
   constructor(private commentService: CommentService) {}
 
-  @Post(':postId')
-  async addComment(
-    @Req() req: Request,
-    @Param('postId') postId: string,
-    @Body() { content }: { content: string },
-  ) {
-    return await this.commentService.createComment({
-      //@ts-expect-error guard adds the userId key
-      userId: req.user.userId,
-      postId,
-      content,
-    });
-  }
-
   @Post('like/:comentId')
   async likeComment(
     @Req() req: Request,
@@ -57,4 +43,25 @@ export class CommentController {
     return await this.commentService.getPostComments(postId, page);
   }
 
+  @Get('user')
+  async getUserCommentedPosts(
+    @Query('page') page: number,
+    @Query('userId') userId: string,
+  ) {
+    return await this.commentService.getUserCommentedPosts(userId, page);
+  }
+
+  @Post(':postId')
+  async addComment(
+    @Req() req: Request,
+    @Param('postId') postId: string,
+    @Body() { content }: { content: string },
+  ) {
+    return await this.commentService.createComment({
+      //@ts-expect-error guard adds the userId key
+      userId: req.user.userId,
+      postId,
+      content,
+    });
+  }
 }
